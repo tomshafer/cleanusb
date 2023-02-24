@@ -14,13 +14,12 @@ logging.basicConfig(format="%(message)s")
 log = logging.getLogger(__name__)
 
 
-def remove_spotlight(path: Path) -> None:
-    log.info("Removing Spotlight index.")
-    if os.path.isdir(path / ".Spotlight-V100"):
-        log.info("  Prompting for an admin password.")
-        run(f'sudo mdutil -v -X "{path}"', shell=True)
-        return
-    log.info("  No index directory found, skipping this step.")
+def remove_dotdirs(path: Path) -> None:
+    log.info("Removing dot-directories.")
+    for pwd, dirs, _ in os.walk(path):
+        for subdir in (d for d in dirs if d.startswith(".")):
+            log.info(f'  Removing "{subdir}"')
+            shutil.rmtree(os.path.join(pwd, subdir))
 
 
 def remove_lostdir(path: Path) -> None:
@@ -28,30 +27,13 @@ def remove_lostdir(path: Path) -> None:
     if os.path.isdir(subpath := path / "LOST.DIR"):
         log.info("  Removing `LOST.DIR`.")
         os.rmdir(subpath)
+        return
+    log.info("  Not preesent, skipping.")
 
 
 def clean_dotfiles(path: Path) -> None:
     log.info("Cleaning up dotfiles with `dot_clean`.")
     run(f'dot_clean -v "{path}"', shell=True)
-
-
-def remove_remaining_dotfiles(path: Path) -> None:
-    log.info("Removing any remaning dotfiles.")
-
-    queue = []
-    for pwd, dirs, files in os.walk(path):
-        basepwd = os.path.basename(pwd)
-        queue += [
-            os.path.join(pwd, x)
-            for x in dirs + files
-            if x.startswith(".") or basepwd.startswith(".")
-        ]
-
-    log.info(f"  Found {len(queue)} dotfile{'s' * (len(queue) != 1)} to remove.")
-
-    for item in reversed(queue):
-        log.debug(f'  * Removing "{item}".')
-        os.rmdir(item) if os.path.isdir(item) else os.remove(item)
 
 
 def organize_library(path: Path) -> None:
@@ -101,14 +83,11 @@ def resolve_keys(d: dict[str, str | list[str]], *keys: str) -> str:
 def main(root: Path, verbose: bool) -> None:
     log.setLevel("DEBUG" if verbose else "INFO")
     log.info(f'Target = "{root}".')
+    log.info(f'  Verbose = "{verbose}"')
 
-    # Remove dotfiles
     remove_lostdir(root)
-    remove_spotlight(root)
+    remove_dotdirs(root)
     clean_dotfiles(root)
-    remove_remaining_dotfiles(root)
-
-    # Organize the library
     organize_library(root)
 
 

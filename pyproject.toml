@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cleanusb"
-version = "0.1.0"
+version = "0.1.1"
 description = "Clean up dotfiles and organize music on a USB stick."
 authors = ["Tom Shafer <tom@tshafer.com>"]
 license = "MIT"
